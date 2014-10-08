@@ -1,0 +1,56 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Bitchin'</title>
+          <style type="text/css">
+            html, body, #map-canvas { height: 100%; margin: 0; padding: 0;}
+            .lizloc {
+                top: 0;
+                position: absolute;
+                height: 100%;
+                width: 100%;
+                background-color: rgba(0, 0, 0, 0.6);
+                color: white;
+                text-align: center;
+                font-size: 30pt;
+            }
+            .lizloc-hilight {
+                margin-top: 20%;
+                padding: 1em;
+                background-color: rgba(0, 0, 0, 0.2);
+            }
+            .current-city {
+                font-weight: bold
+            }
+          </style>
+
+        <script type="text/javascript"
+            src="http://maps.googleapis.com/maps/api/js?key=AIzaSyBEh3AEDYoo0lQ5kkbtyNoPfxm8VNgW28Q&sensor=false">
+        </script>
+        <script type="text/javascript">
+         function initialize() {
+           var mapOptions = {
+             zoom: 8,
+             center: new google.maps.LatLng({{lat}}, {{lng}}),
+             disableDefaultUI: true,
+             disableDoubleClickZoom: true,
+             scrollwheel: false,
+             keyboardShortcuts: false,
+             draggable: false,
+           };
+           var map = new google.maps.Map(document.getElementById('map-canvas'),
+               mapOptions);
+         }
+         google.maps.event.addDomListener(window, 'load', initialize);
+
+       </script>
+    </head>
+    <body>
+        <div id="map-canvas"></div>
+        <div class="lizloc">
+            <div class="lizloc-hilight">
+                Liz is currently in <span class="current-city">{{ city }}</span> (probably)
+            </div>
+        </div>
+    </body>
+</html>

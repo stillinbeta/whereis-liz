@@ -55,8 +55,13 @@ class Command(BaseCommand):
 
         r.raise_for_status()
         dict_ = r.json()
-
         trips = dict_['Trip']
+
+        r = tripit.get('https://api.tripit.com/v1/list/trip', params={'past': 'false',
+            'traveller': 'true',
+            'page_size': 50})
+        r.raise_for_status()
+        trips.extend(r.json()['Trip'])
 
         for trip_obj in trips:
             flights = []
@@ -79,9 +84,16 @@ class Command(BaseCommand):
                 segment = {
                     'trip': trip,
                     'start_airport': flight['start_airport_code'],
-                    'end_airport': flight['end_airport_code'],
+                    'start_city': flight['start_city_name'],
                     'start_time': self._get_datetime(flight['StartDateTime']),
+                    'start_ltlng': '{},{}'.format(flight['start_airport_latitude'],
+                                                  flight['start_airport_longitude']),
+                    'end_airport': flight['end_airport_code'],
+                    'end_city': flight['end_city_name'],
                     'end_time': self._get_datetime(flight['EndDateTime']),
+                    'end_ltlng': '{},{}'.format(flight['end_airport_latitude'],
+                                                  flight['end_airport_longitude']),
+
                     'airline': flight['marketing_airline'],
                     'flight_number': flight['marketing_flight_number'],
                     'distance_miles': self._get_distance(flight['distance']),
