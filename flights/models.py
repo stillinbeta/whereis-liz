@@ -6,7 +6,6 @@ class Trip(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=100)
 
-
 class Segment(models.Model):
     id = models.IntegerField(primary_key=True)
     trip = models.ForeignKey(Trip)

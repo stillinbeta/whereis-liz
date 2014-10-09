@@ -6,7 +6,7 @@ import os
 from requests_oauthlib import OAuth1Session
 from django.core.management.base import BaseCommand
 
-from flights.models import Trip, Segment
+from flights.models import Trip, Segment, TimeStamp
 
 class Command(BaseCommand):
     def _get_datetime(self, date_obj):
@@ -48,22 +48,42 @@ class Command(BaseCommand):
                 )
         tripit.params.update({'format': 'json'})
 
+        modified_since = TimeStamp.get()
+
         # TODO pagination
         r = tripit.get('https://api.tripit.com/v1/list/trip', params={'past': 'true',
+            'modified_since': modified_since,
             'traveller': 'true',
             'page_size': 50})
 
         r.raise_for_status()
-        dict_ = r.json()
-        trips = dict_['Trip']
+        past = r.json()
+        trips = past.get('Trip', [])
+        if not isinstance(trips, list):
+            trips = [trips]
+        trips = past.get('Trip', [])
 
         r = tripit.get('https://api.tripit.com/v1/list/trip', params={'past': 'false',
+            'modified_since': modified_since,
             'traveller': 'true',
             'page_size': 50})
         r.raise_for_status()
-        trips.extend(r.json()['Trip'])
+        future = r.json()
+        trip_obj = future.get('Trip', [])
 
+        # Tripit API only returns lists if there are plural objects >_<
+        if isinstance(trip_obj, list):
+            trips.extend(trip_obj)
+        else:
+            trips.append(trip_obj)
+
+        TimeStamp.set(min(future['timestamp'], past['timestamp']))
+
+        if len(trips) == 0:
+            self.stdout.write("No new trips found!")
+            return 0
         for trip_obj in trips:
+            self.stdout.write("Found trip {}".format(trip_obj['display_name']))
             flights = []
             trip, _ = Trip.objects.update_or_create(
                 id=trip_obj['id'],
@@ -71,7 +91,9 @@ class Command(BaseCommand):
             )
             r = tripit.get('https://api.tripit.com/v1/list/object/trip_id/{}/type/air'.format(trip.id))
             r.raise_for_status()
-            ao = r.json()['AirObject']
+            ao = r.json().get('AirObject', [])
+
+            # Tripit API only returns lists if there are plural objects >_<
             if not isinstance(ao, list):
                 ao = [ao]
             for res in ao:
@@ -80,6 +102,10 @@ class Command(BaseCommand):
                     flights.extend(segment)
                 else:
                     flights.append(segment)
+
+            # Clear all segments so we can add new ones
+            trip.segment_set.all().delete()
+
             for flight in flights:
                 segment = {
                     'trip': trip,
@@ -99,6 +125,13 @@ class Command(BaseCommand):
                     'distance_miles': self._get_distance(flight['distance']),
                     'duration_mins': self._get_duration(flight['duration']),
                 }
+                self.stdout.write(
+                    '  Adding {} {} for trip {}'.format(
+                        segment['airline'],
+                        segment['flight_number'],
+                        trip.name,
+                    )
+                )
                 Segment.objects.update_or_create(id=flight['id'], defaults=segment)
 
 
