@@ -26,3 +26,16 @@ class Segment(models.Model):
     distance_miles = models.IntegerField()
     duration_mins = models.IntegerField()
 
+class TimeStamp(models.Model):
+    timestamp = models.IntegerField()
+
+    @classmethod
+    def set(cls, val):
+        ts =  cls.objects.get()
+        ts.timestamp = val
+        ts.save()
+
+    @classmethod
+    def get(cls):
+        return cls.objects.get().timestamp
+
