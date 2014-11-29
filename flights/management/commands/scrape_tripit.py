@@ -3,12 +3,19 @@ from datetime import datetime
 from pprint import pprint
 import os
 
-from requests_oauthlib import OAuth1Session
 from django.core.management.base import BaseCommand
+from requests_oauthlib import OAuth1Session
 
 from flights.models import Trip, Segment, TimeStamp
 
 class Command(BaseCommand):
+    # fffffff
+    DURATION_REGEXS = [
+        r'(?:(\d+) hours)? (\d+) minutes',
+        r'(?:(\d+)h, )?(\d+)m',
+        r'(\d+):(\d+)',
+    ]
+
     def _get_datetime(self, date_obj):
         return datetime.strptime(
             '{} {} {}'.format(date_obj['date'],
@@ -17,27 +24,39 @@ class Command(BaseCommand):
             '%Y-%m-%d %H:%M:%S %z'
         )
 
-    def _get_duration(self, duration):
-        match = re.match('(?:(\d+)h, )?(\d+)m', duration)
-        if match is None:
-            raise ValueError("Can't parse duration " + duration)
-        hrs, mins = match.groups()
-        if hrs is None:
-            return int(mins)
-        return int(hrs) * 60 + int(mins)
+    def _get_duration(self, flight):
+        duration = flight.get('duration') 
+        if duration is not None:
+            for regex in self.DURATION_REGEXS:
+                match = re.match(regex, duration)
+                if match is not None:
+                    break
+            if match is not None:
+                hrs, mins = match.groups()
+                if hrs is None:
+                    return int(mins)
+                return int(hrs) * 60 + int(mins)
+
+        # calculate by hand
+        start_time = self._get_datetime(flight['StartDateTime'])
+        end_time = self._get_datetime(flight['EndDateTime'])
+
+        return (end_time - start_time).seconds * 60
 
     def _get_distance(self, distance):
+        if distance is None:
+            return None
         match = re.match('([\d,]+) (\w+)', distance)
         if match is None:
             raise ValueError("Can't parse distance " + distance)
         distance, units = match.groups()
         distance = int(distance.replace(',',''))
-        if units == 'miles':
+        if units.lower() == 'miles':
             return distance
-        elif units == 'km':
+        elif units.lower() == 'km':
             return round(distance * 0.621)
         else:
-            raise ValueError("Can't parse distance unit" + units)
+            raise ValueError("Can't parse distance unit " + units)
 
     def handle(self, *args, **kwargs):
         tripit = OAuth1Session(
@@ -77,7 +96,7 @@ class Command(BaseCommand):
         else:
             trips.append(trip_obj)
 
-        TimeStamp.set(min(future['timestamp'], past['timestamp']))
+
 
         if len(trips) == 0:
             self.stdout.write("No new trips found!")
@@ -122,8 +141,8 @@ class Command(BaseCommand):
 
                     'airline': flight['marketing_airline'],
                     'flight_number': flight['marketing_flight_number'],
-                    'distance_miles': self._get_distance(flight['distance']),
-                    'duration_mins': self._get_duration(flight['duration']),
+                    'distance_miles': self._get_distance(flight.get('distance')),
+                    'duration_mins': self._get_duration(flight),
                 }
                 self.stdout.write(
                     '  Adding {} {} for trip {}'.format(
@@ -133,5 +152,7 @@ class Command(BaseCommand):
                     )
                 )
                 Segment.objects.update_or_create(id=flight['id'], defaults=segment)
+
+        TimeStamp.set(min(future['timestamp'], past['timestamp']))
 
 

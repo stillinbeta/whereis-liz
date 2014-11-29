@@ -22,7 +22,7 @@ class Segment(models.Model):
     end_ltlng = models.CharField(max_length=100) # lat,lng
 
     flight_number = models.IntegerField()
-    distance_miles = models.IntegerField()
+    distance_miles = models.IntegerField(null=True)
     duration_mins = models.IntegerField()
 
 class TimeStamp(models.Model):
