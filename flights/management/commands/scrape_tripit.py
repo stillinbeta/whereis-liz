@@ -25,7 +25,7 @@ class Command(BaseCommand):
         )
 
     def _get_duration(self, flight):
-        duration = flight.get('duration') 
+        duration = flight.get('duration')
         if duration is not None:
             for regex in self.DURATION_REGEXS:
                 match = re.match(regex, duration)
@@ -80,7 +80,6 @@ class Command(BaseCommand):
         trips = past.get('Trip', [])
         if not isinstance(trips, list):
             trips = [trips]
-        trips = past.get('Trip', [])
 
         r = tripit.get('https://api.tripit.com/v1/list/trip', params={'past': 'false',
             'modified_since': modified_since,
