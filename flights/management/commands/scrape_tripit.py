@@ -124,7 +124,6 @@ class Command(BaseCommand):
                                                       train.get('StartStationAddress'))
         end_city, end_latlng = self._get_location(train['end_station_name'],
                                                   train.get('EndStationAddress'))
-
         segment = {
             'trip': trip,
             'start_station': train['start_station_name'],
@@ -149,8 +148,7 @@ class Command(BaseCommand):
             trip.name,
             )
         )
-        TrainSegment.objects.update_or_create(id=train['id'], defaults=segment)
-
+        obj = TrainSegment.objects.update_or_create(id=train['id'], defaults=segment)
 
     def handle(self, *args, **kwargs):
         tripit = OAuth1Session(
@@ -192,12 +190,15 @@ class Command(BaseCommand):
         if len(trips) == 0:
             self.stdout.write("No new trips found!")
             return 0
+
         for trip_obj in trips:
             self.stdout.write("Found trip {}".format(trip_obj['display_name']))
             trip, _ = Trip.objects.update_or_create(
                 id=trip_obj['id'],
                 defaults={'name': trip_obj['display_name']}
             )
+            trip.segment_set.all().delete()
+            trip.trainsegment_set.all().delete()
             for type_, obj, maker in [
                     ('air', 'AirObject', self._make_segment),
                     ('rail', 'RailObject', self._make_train_segment)]:
@@ -220,7 +221,6 @@ class Command(BaseCommand):
                         segments.append(segment)
 
                 # Clear all segments so we can add new ones
-                trip.segment_set.all().delete()
 
                 [maker(trip, segment) for segment in segments]
 

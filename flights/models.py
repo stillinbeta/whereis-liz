@@ -25,6 +25,9 @@ class Segment(models.Model):
     distance_miles = models.IntegerField(null=True)
     duration_mins = models.IntegerField()
 
+    def __str__(self):
+        return "<Segement {} {}>".format(self.airline, self.flight_number)
+
 class TrainSegment(models.Model):
     id = models.IntegerField(primary_key=True)
     trip = models.ForeignKey(Trip)
@@ -43,7 +46,8 @@ class TrainSegment(models.Model):
     duration_mins = models.IntegerField()
     carrier = models.CharField(max_length=40)
 
-
+    def __str__(self):
+        return "<TrainSegment {} {}>".format(self.carrier, self.train_number)
 
 class TimeStamp(models.Model):
     timestamp = models.IntegerField()
