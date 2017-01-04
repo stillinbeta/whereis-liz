@@ -116,6 +116,8 @@ class Command(BaseCommand):
         r.raise_for_status()
         result = r.json()['results'][0]
         city = next(x for x in result['address_components'] if 'locality' in x['types'])
+        if isinstance(city, dict) and 'long_name' in city:
+            city = city['long_name']
         loc = result['geometry']['location']
         return city, loc['lat'], loc['lng']
 
